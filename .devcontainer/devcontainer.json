@@ -3,10 +3,10 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "postCreateCommand": "pnpm install && cp .env.example .env || true",
+  "postCreateCommand": "if [ -f package.json ]; then pnpm install; else echo 'Skipping pnpm install: package.json not found'; fi && if [ -f .env ]; then :; elif [ -f .env.example ]; then cp .env.example .env; else echo 'Error: .env.example not found in the workspace' >&2; exit 1; fi",
   "customizations": {
     "settings": {
-      "terminal.integrated.env Integrated": {
+      "terminal.integrated.env.linux": {
         "PNPM_HOME": "/usr/local/bin"
       },
       "editor.formatOnSave": true,
@@ -22,5 +22,6 @@
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
   "shutdownAction": "none",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
   "workspaceFolder": "/workspace"
 }
