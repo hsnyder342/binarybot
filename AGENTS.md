@@ -46,16 +46,13 @@ deploy/            # Production Dockerfile and compose
 | `pnpm test` | Unit tests (Vitest) |
 | `pnpm test:e2e` | E2E against the development guild |
 | `pnpm build` | Build all packages |
-| `pnpm db:generate` | Generate a Drizzle migration |
-| `pnpm db:migrate` | Apply pending migrations |
 
 ## Architecture
 
 - Outbound-only process; no public port needed.
 - Production runs on a Hetzner VPS via Docker Compose; CI/CD via GitHub Actions.
 - Scheduling is in-process via `croner`; no external queue.
-- Database: PostgreSQL with Drizzle ORM (not yet implemented; see [DATABASE.md](./DATABASE.md)).
-- Each environment serves exactly one guild — tables are not keyed by `guild_id`.
+- Database implementation and supporting infrastructure are out of scope until this instruction changes. Do not add PostgreSQL, Drizzle, migrations, database configuration, or database deployment support. See [DATABASE.md](./DATABASE.md) for future design notes only.
 
 ## Conventions
 
@@ -64,11 +61,9 @@ deploy/            # Production Dockerfile and compose
 - **Zod validation** at boot for all environment variables.
 - **Pino** for structured JSON logging.
 - **Vitest** for tests; unit tests in CI, E2E local only.
-- **Migrations** are forward-only, backward-compatible SQL files in `drizzle/`.
 - **Health endpoint** is localhost-only for container healthchecks.
 
 ## Pitfalls
 
 - Never point a local `.env` at the production Discord token.
-- Advisory locks prevent overlapping service runs; document concurrency assumptions.
-- Rollback deploys require migrations to be forward-compatible with the previous image.
+- Deployment rollbacks must remain compatible with the previous image.
