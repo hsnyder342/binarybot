@@ -1,0 +1,26 @@
+{
+  "name": "binarybot",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postCreateCommand": "pnpm install && cp .env.example .env || true",
+  "customizations": {
+    "settings": {
+      "terminal.integrated.env Integrated": {
+        "PNPM_HOME": "/usr/local/bin"
+      },
+      "editor.formatOnSave": true,
+      "typescript.ts-node.path": "/usr/local/bin/node"
+    },
+    "extensions": [
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "vitest.explorer"
+    ]
+  },
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "shutdownAction": "none",
+  "workspaceFolder": "/workspace"
+}
