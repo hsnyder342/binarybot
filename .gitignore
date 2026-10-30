@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build output and TypeScript caches
+dist/
+build/
+*.tsbuildinfo
+
+# Test and coverage output
+coverage/
+
+# Logs
+*.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
