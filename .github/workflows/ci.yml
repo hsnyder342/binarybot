@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - uses: pnpm/setup@v1
       with:
-        node-version: '20'
-        cache: 'pnpm'
+        version: 11
+        runtime: node@20
+        cache: true
     - name: Install pnpm
       run: npm install -g pnpm
     - name: Install dependencies
