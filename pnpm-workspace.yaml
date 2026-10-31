@@ -3,3 +3,5 @@ packages:
   - 'packages/core'
   - 'services/health-snapshot'
   - 'services/presence-rotation'
+allowBuilds:
+  esbuild: true

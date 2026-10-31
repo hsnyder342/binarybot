@@ -13,13 +13,8 @@ jobs:
     - uses: actions/checkout@v4
     - uses: pnpm/setup@v1
       with:
-        version: 11
-        runtime: node@20
-        cache: true
-    - name: Install pnpm
-      run: npm install -g pnpm
-    - name: Install dependencies
-      run: pnpm install
+        version: 12
+        runtime: node@24
     - name: Type check
       run: pnpm typecheck
     - name: Lint

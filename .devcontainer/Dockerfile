@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm globally.
-RUN npm install -g pnpm@latest
+RUN npm install -g pnpm@12
 
 # pnpm workspace configuration.
 ENV PNPM_HOME="/usr/local/bin" \
