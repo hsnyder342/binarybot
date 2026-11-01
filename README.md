@@ -1,53 +1,86 @@
 # binarybot
 
-A single-guild Discord bot written in TypeScript on Node.js 24 LTS. It runs in
-production on a Hetzner VPS and can be run locally for development. The bot
-handles slash commands and button interactions, and runs a set of self-scheduled
-services.
+A single-guild Discord bot written in TypeScript on Node.js 24 LTS. It runs as
+one outbound-only process: a discord.js gateway connection, in-process cron
+services, and a localhost-only health endpoint.
+
+---
+
+## Status
+
+> **Scaffold only.** The repository currently contains the workspace skeleton and
+> placeholder modules; no bot behaviour is implemented yet. The design below is
+> the target. [AGENTS.md](./AGENTS.md) holds the working agreement for agents.
+>
+> The database layer is out of scope; [DATABASE.md](./DATABASE.md) holds future
+> design notes only.
 
 ---
 
 ## Table of contents
 
-- [Architecture overview](#architecture-overview)
-- [Tech stack](#tech-stack)
-- [Deployment topology](#deployment-topology)
+- [Target architecture](#target-architecture)
 - [Repository layout](#repository-layout)
-- [Services](#services)
-- [Configuration](#configuration)
-- [Commands and interactions](#commands-and-interactions)
-- [CI/CD](#cicd)
-- [Testing](#testing)
-- [Observability](#observability)
+- [Tech stack](#tech-stack)
+- [Commands](#commands)
 - [Local development](#local-development)
-- [Footnotes](#footnotes)
+- [Observability](#observability)
+- [Testing](#testing)
+- [CI](#ci)
 
 ---
 
-## Architecture overview
+## Target architecture
 
-The bot is an outbound-only process. It opens a gateway connection to Discord and
-never needs a publicly reachable port.
+Three layers, with dependencies pointing one way: **`apps/bot` → `services/*` →
+`packages/core`**.
 
 ```
-                        +---------------------------+
-                        |        Discord            |
-                        +-------------+-------------+
-                                      ^
-                                      | outbound only
-                +---------------------+---------------------+
-                |                                           |
-    +-----------v-----------+                   +-----------v-----------+
-    |  bot (production)     |                   |  bot (local dev)      |
-    |  Hetzner VPS          |                   |  developer machine    |
-    |  Docker Compose       |                   |  pnpm dev             |
-    |  discord.js           |                   |  discord.js           |
-    |  cron services        |                   |  cron services        |
-    +-----------------------+                   +-----------------------+
+apps/bot          Discord adapter: client, commands, buttons, router, boot/shutdown
+   |
+services/*        self-scheduling jobs implementing Service
+   |
+packages/core     platform primitives, no Discord business logic
+                  config - logger - health - scheduler - service registry - custom-id
 ```
 
-Production runs on the VPS; developers run the bot locally with a separate Discord
-application. Scheduling happens in-process, with no external queue.
+| Layer | Responsibility |
+|---|---|
+| `packages/core` | Environment validation, structured logging, health state and HTTP server, cron scheduling with an overlap guard, the service registry, and the versioned button `custom_id` codec. |
+| `services/*` | Background jobs that own their own schedule. Each exposes a pure function for testing plus a factory returning a `Service`. |
+| `apps/bot` | Discord client, guild-scoped slash commands, button handlers, a single interaction router, and the composition root that wires everything and owns shutdown. |
+
+Boot flow: load `.env` if needed → validate env with Zod → create logger and
+health state → start the health server → create the client and registries →
+log in → start services on `ClientReady`.
+
+Shutdown flow: mark not ready → stop services in reverse order → close the
+health server → destroy the client → force-exit after `SHUTDOWN_TIMEOUT_MS`.
+
+V1 keeps runtime state in memory. There is no database.
+
+---
+
+## Repository layout
+
+```
+binarybot/
+├── apps/
+│   └── bot/                  # discord.js client, commands, button handlers
+├── packages/
+│   └── core/                 # config, logger, health, scheduler, service registry
+├── services/
+│   ├── presence-rotation/    # rotates the bot's activity
+│   └── health-snapshot/      # records a heartbeat
+├── deploy/                   # production Dockerfile and compose file
+├── test/                     # shared test helpers
+├── .github/workflows/        # CI
+├── AGENTS.md                 # agent instructions and working agreement
+├── DATABASE.md               # future database design (not implemented)
+└── .env.example
+```
+
+Workspace packages are scoped `@binarybot/*` and linked with `workspace:*`.
 
 ---
 
@@ -58,134 +91,75 @@ application. Scheduling happens in-process, with no external queue.
 | Runtime | Node.js 24 LTS, ESM |
 | Language | TypeScript (strict) |
 | Package manager | pnpm workspaces |
-| Discord | discord.js 14.27 |
+| Discord | discord.js 14 |
 | Scheduling | croner |
 | Validation | Zod |
 | Logging | pino |
 | Testing | Vitest |
 | Containers | Docker + Docker Compose |
-| CI/CD | GitHub Actions |
+| CI | GitHub Actions |
 
 ---
 
-## Deployment topology
+## Commands
 
-There is one deployed environment, **production**, on a single Hetzner VPS.
-Development happens locally on each developer's machine.
-
-| Environment | How it runs |
-|---|---|
-| `production` | Docker Compose on the VPS, deployed by CI |
-| `local` | `pnpm dev` on a developer machine |
-
-Production makes only outbound connections. Each developer supplies their own
-token and guild id through `.env`.
-
----
-
-## Repository layout
-
-```
-binarybot/
-├── apps/
-│   └── bot/                  # discord.js client and handlers
-├── packages/
-│   └── core/                 # config, logger, service registry, health server
-├── services/                 # self-scheduling service modules
-├── deploy/                   # Dockerfile and production compose file
-├── .github/workflows/        # CI + CD pipelines
-├── .env.example
-└── README.md
-```
-
----
-
-## Services
-
-Services are modules that run on their own cron schedules and are registered at
-boot.
-
-| Service | Purpose |
-|---|---|
-| `presence-rotation` | Rotate the bot's activity status. |
-| `health-snapshot` | Record a heartbeat. |
-
----
-
-## Configuration
-
-Secrets and wiring are supplied through environment variables, which are
-validated at boot.
-
----
-
-## Commands and interactions
-
-Commands are defined with discord.js builders and registered to the guild on
-deploy. Interaction handlers validate their payloads before executing. Buttons
-encode their intent in a `custom_id`, which the handler parses to load the
-relevant record.
-
----
-
-## CI/CD
-
-Trunk-based development. Pull requests run lint, typecheck, unit tests, and a
-build. Merges to `main` also build and push the image. Production deploys are
-manual, require approval, and finish with a smoke test; a failed deploy rolls
-back.
-
-| Trigger | Result |
-|---|---|
-| Pull request | checks only |
-| Push to `main` | checks + image build |
-| Release tag | approval-gated production deploy |
-
----
-
-## Testing
-
-| Layer | Scope |
-|---|---|
-| Unit | Commands, services, config, helpers |
-| E2E | Commands and buttons against the development bot |
-
-CI runs unit tests on every pull request. E2E tests run locally and never touch
-production.
-
----
-
-## Observability
-
-Structured JSON logs, plus a localhost-only health endpoint for container
-healthchecks and deploys.
-
----
-
-## Local development
-
-Prerequisites: Node.js 24 LTS, pnpm.
-
-```bash
-pnpm install
-cp .env.example .env        # fill DISCORD_TOKEN, DISCORD_APPLICATION_ID, DISCORD_GUILD_ID
-pnpm --filter @binarybot/bot dev
-```
-
-Each developer supplies their own token and guild id. Never point a local `.env`
-at the production token.
+Currently available:
 
 | Command | Description |
 |---|---|
 | `pnpm lint` | Lint the workspace |
 | `pnpm typecheck` | Type-check the workspace |
-| `pnpm test` | Unit tests |
-| `pnpm test:e2e` | E2E against the development guild |
+| `pnpm test` | Unit tests (Vitest) |
 | `pnpm build` | Build all packages |
+
+Planned:
+
+| Command | Description |
+|---|---|
+| `pnpm dev` | Run the bot in watch mode (`tsx`) |
+| `pnpm test:watch` | Unit tests in watch mode |
+| `pnpm test:e2e` | E2E placeholder against the development guild (local only) |
+| `pnpm deploy:commands` | Register guild slash commands |
 
 ---
 
-## Footnotes
+## Local development
 
-The database layer is not yet implemented. Its intended design is documented in
-[DATABASE.md](./DATABASE.md) and will be added later.
+Prerequisites: Node.js 24 LTS and pnpm 12. A dev container is available under
+`.devcontainer/`.
+
+```bash
+pnpm install
+cp .env.example .env        # fill DISCORD_TOKEN, DISCORD_APPLICATION_ID, DISCORD_GUILD_ID
+pnpm dev                    # runs once the bot entry point exists
+```
+
+Each developer supplies their own token and guild id. Never point a local `.env`
+at the production token.
+
+---
+
+## Observability
+
+Structured JSON logs through pino, and a localhost-only health endpoint
+(`GET /healthz` for liveness, `GET /readyz` for readiness) used by the container
+healthcheck. Neither is exposed publicly.
+
+---
+
+## Testing
+
+| Layer | Scope | Where |
+|---|---|---|
+| Unit | Config, codecs, scheduler, registry, commands, services — Discord objects mocked | CI |
+| E2E | Commands and buttons against the development guild | Local only |
+
+E2E tests never touch production.
+
+---
+
+## CI
+
+`.github/workflows/ci.yml` runs install, typecheck, lint, and unit tests on pull
+requests and pushes to `main`. The production image build and any deploy job are
+not implemented yet.

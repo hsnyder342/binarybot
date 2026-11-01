@@ -1,7 +1,9 @@
 # Database
 
-> **Status: not yet implemented.** The database described here does not exist
-> yet. It will be added later; this document describes the intended design.
+> **Status: not implemented, and out of scope.** Nothing described here exists
+> yet. V1 stores runtime state in memory; this document is a design sketch to
+> revisit only once the bot itself is implemented and the instructions change.
+> Do not add PostgreSQL, Drizzle, migrations, or database configuration.
 
 The bot will use PostgreSQL, accessed through Drizzle ORM and migrated with
 drizzle-kit. Each environment serves exactly one guild, so tables are not keyed by
@@ -61,8 +63,11 @@ so a rollback to the previous image continues to work.
 
 ## Local development
 
-A local Postgres is started with Docker Compose, and migrations are applied before
-running the bot:
+> Aspirational — `deploy/development/docker-compose.yml` does not exist. Nothing
+> in this section is runnable today.
+
+A local Postgres would be started with Docker Compose, and migrations applied
+before running the bot:
 
 ```bash
 docker compose -f deploy/development/docker-compose.yml up -d
@@ -76,3 +81,6 @@ pnpm --filter @binarybot/core db:migrate
 Services are registered at boot and scheduled in-process. A Postgres advisory
 lock prevents overlapping runs, and each run's outcome is written to
 `service_runs`.
+
+Today the overlap guard is in-process only (a boolean per job in the scheduler);
+there is no advisory lock, because there is no database.
