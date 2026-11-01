@@ -29,6 +29,9 @@ importers:
 
   apps/bot:
     dependencies:
+      '@binarybot/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       discord.js:
         specifier: ^14.14.1
         version: 14.27.0

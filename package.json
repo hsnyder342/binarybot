@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc"

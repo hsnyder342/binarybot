@@ -1,8 +1,9 @@
 {
-  "name": "bot",
+  "name": "@binarybot/bot",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
+    "@binarybot/core": "workspace:*",
     "discord.js": "^14.14.1"
   }
 }
