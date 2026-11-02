@@ -1,5 +1,8 @@
 {
   "name": "health-snapshot",
   "version": "1.0.0",
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  }
 }

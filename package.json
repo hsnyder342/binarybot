@@ -7,7 +7,7 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc"
+    "build": "pnpm -r build"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
