@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "pnpm -r build",
-    "dev": "tsx watch --env-file-if-exists=./.env apps/bot/src/index.ts"
+    "dev": "tsx watch --env-file-if-exists=./.env apps/bot/src/index.ts",
+    "clean": "rm -rf apps/*/dist packages/*/dist services/*/dist coverage"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
