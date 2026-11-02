@@ -130,7 +130,7 @@ Prerequisites: Node.js 24 LTS and pnpm 12. A dev container is available under
 
 ```bash
 pnpm install
-cp .env.example .env        # fill DISCORD_TOKEN, DISCORD_APPLICATION_ID, DISCORD_GUILD_ID
+cp .env.example .env        # fill DISCORD_TOKEN, DISCORD_GUILD_ID
 pnpm dev                    # runs once the bot entry point exists
 ```
 
