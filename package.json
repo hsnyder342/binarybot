@@ -7,13 +7,15 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "dev": "tsx watch --env-file-if-exists=./.env apps/bot/src/index.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
     "eslint": "^8.57.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.3.3",
     "vitest": "^1.3.1"
   }
