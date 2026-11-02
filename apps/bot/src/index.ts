@@ -1,13 +1,10 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client } from 'discord.js';
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-  ],
+  intents: [],
 });
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log('Bot is ready!');
 });
 
