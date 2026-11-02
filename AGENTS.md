@@ -1,122 +1,89 @@
 # Agent Instructions
 
-## Commit Messages
+## Current state
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
-
-```
-<type>[optional scope]: <description>
-
-[optional body]
-```
-
-| Type | Meaning |
-|------|---------|
-| `feat` | A new feature |
-| `fix` | A bug fix |
-| `chore` | Maintenance, dependencies, tooling |
-| `docs` | Documentation-only changes |
-| `refactor` | Code change with no behavior change |
-| `test` | Adding or updating tests |
-| `ci` | CI/CD pipeline changes |
-| `revert` | Reverting a previous commit |
-
-Rules:
-- Lowercase description, no period at end.
-- Scope is the package name (e.g., `bot`, `core`) when applicable.
-- Use imperative mood: "add" not "added" or "adding".
-
-## Current State
-
-The repository is a **clean scaffold** at commit `2848dfb`. Nothing is
-implemented yet:
-
-- Workspace packages are still named `bot`, `core`, `health-snapshot`, and
-  `presence-rotation`; they are not yet scoped `@binarybot/*`.
-- `tsconfig.json` is a single flat config with `moduleResolution: node`.
-- `zod`, `pino`, `croner`, and `tsx` are not installed; the lockfile has no
-  entries for them.
-- `node_modules/` and every `dist/` directory have been removed.
-- `apps/bot/src/index.ts` and the three package `src/index.ts` files are
-  placeholders.
-
-The bot is built incrementally; see the working agreement below.
-
-## Working Agreement
-
-This project is built **incrementally**. A previous attempt implemented the whole
-system in one pass and had to be discarded.
-
-- One logical change per commit. Do not bundle unrelated work.
-- `pnpm typecheck` and `pnpm test` must pass before starting the next change.
-- Add the test alongside the code it covers, in the same commit.
-- Prefer the smallest change that satisfies the requirement; resist adding
-  infrastructure it does not need.
-- If an approach turns out to be wrong, stop and discuss it rather than widening
-  the change.
-
-## Target Architecture
-
-Three layers, dependencies pointing one way: `apps/bot` → `services/*` →
-`packages/core`. `core` must not import discord.js.
-
-```
-apps/bot/          # Discord client, slash commands, button handlers, router, boot
-packages/core/     # Config, logger, health server, scheduler, service registry, custom-id
-services/          # Self-scheduling service modules (presence-rotation, health-snapshot)
-deploy/            # Production Dockerfile and compose file
-test/              # Shared test helpers
-```
-
-- **`Service`** — `{ name, start(context), stop() }`. `ServiceContext` carries
-  `client`, `config`, `logger`, and `health`. The registry rejects duplicate
-  names, starts in registration order, stops in reverse, and isolates a failing
-  service so it cannot take down the others.
-- **Scheduling** — in-process via `croner`. Every job runs behind an overlap
-  guard that skips and logs when the previous run is still in progress.
-- **Custom ids** — buttons encode intent as `v1:<namespace>:<action>[:<id>]`,
-  validated on both encode and decode, capped at Discord's 100 characters.
-- **Health** — `GET /healthz` (liveness) and `GET /readyz` (readiness, 503 until
-  `ClientReady`) on a localhost-bound server.
-- **Boot** — load `.env` if present, validate env with Zod, create logger and
-  health state, start the health server, create the client and registries, log
-  in, then start services on `ClientReady`.
-- **Shutdown** — mark not ready, stop services, close the health server, destroy
-  the client, force-exit after `SHUTDOWN_TIMEOUT_MS`.
-- **V1 state is in memory.** There is no database.
+- The repo is still a **scaffold**. The only real behavior in `apps/bot/src/index.ts`
+  creates a discord.js `Client` and logs in; `packages/core` and both services
+  export placeholder functions.
+- `README.md` describes the **target** architecture, not shipped features.
+  `deploy/`, `test/`, and most of the design do not exist yet.
+- `@binarybot/bot` and `@binarybot/core` are scoped; the two services are still
+  named `health-snapshot` and `presence-rotation`. `bot` links core with
+  `workspace:*`.
+- `dist/` is ignored build output. Do not edit or commit it.
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm lint` | Lint the workspace |
-| `pnpm typecheck` | Type-check the workspace |
-| `pnpm test` | Unit tests (Vitest) |
-| `pnpm build` | Build all packages |
-| `pnpm dev` | Run the bot in watch mode (`tsx`) |
-| `pnpm test:watch` | Unit tests in watch mode |
-| `pnpm test:e2e` | E2E placeholder, local only |
-| `pnpm deploy:commands` | Register guild slash commands |
+Requires Node 24 and pnpm 12. Run `pnpm install`; local config lives in `.env`
+(copy `.env.example`).
 
-## Conventions
+| Command | What it does |
+|---|---|
+| `pnpm typecheck` | One root `tsc --noEmit` over `apps/`, `packages/`, `services/` |
+| `pnpm lint` / `pnpm lint:fix` | ESLint over all `.ts` files |
+| `pnpm test` | Vitest unit tests |
+| `pnpm build` | Recursive per-package build via each `tsconfig.build.json` |
+| `pnpm clean` | Delete `dist/` and `coverage/` |
+| `pnpm dev` | `tsx watch` entry point, loads `.env` if present |
 
-- **ESM only** — no CommonJS. Relative imports use `.js` specifiers (NodeNext).
-- **TypeScript strict** — no `any`; use `unknown` with narrowing.
-- **Zod validation** at boot for all environment variables.
-- **Pino** for structured JSON logging; never log tokens.
-- **Vitest** for tests; Discord objects are mocked. Unit tests run in CI, E2E
-  local only.
-- **Health endpoint** is localhost-only for container healthchecks.
-- **Commands** are guild-scoped and deployed with `pnpm deploy:commands`.
-- **Services** are registered at boot, run under an overlap guard, and log
-  outcomes.
+Run one test file with `pnpm exec vitest run <path>`.
 
-## Pitfalls
+CI (`.github/workflows/ci.yml`) runs typecheck → lint → test on Node 24/pnpm 12;
+it does **not** build. README mentions `test:watch`, `test:e2e`, and
+`deploy:commands`, but those scripts do not exist yet.
 
-- Never point a local `.env` at the production Discord token.
-- Deployment rollbacks must remain compatible with the previous image.
-- Do not bind the health server to a public interface.
-- Do not add a database until these instructions change. See
-  [DATABASE.md](./DATABASE.md) for future design notes only.
-- `.devcontainer/mine/` is deliberately git-excluded (`.git/info/exclude`); it
-  holds local-only agent tooling and must not be committed.
+## Layout and build wiring
+
+Dependencies point one way: `apps/bot` → `services/*` → `packages/core`.
+`core` must not import discord.js.
+
+- Root `tsconfig.json` maps `@binarybot/core` to `packages/core/src/index.ts` and
+  type-checks the whole workspace.
+- Per-package `tsconfig.json` files extend the root config. `tsconfig.build.json`
+  clears `paths`, excludes `*.test.ts`, and emits to `dist/`.
+- Tests are colocated as `src/*.test.ts`; Discord objects must be mocked.
+  Vitest uses the `node` environment.
+- Builds rely on the workspace link for `@binarybot/core`, not the root `paths`
+  alias.
+
+## Target design to follow when implementing
+
+- `Service` is `{ name, start(context), stop() }`; `ServiceContext` carries
+  `client`, `config`, `logger`, and `health`. The registry rejects duplicate
+  names, starts in registration order, stops in reverse, and isolates failures.
+- Scheduling uses `croner` behind an overlap guard.
+- Button ids are `v1:<namespace>:<action>[:<id>]`, validated on encode and
+  decode, capped at Discord's 100 characters.
+- Health is localhost-only: `GET /healthz` for liveness, `GET /readyz` for
+  readiness (503 until ready).
+- Boot: validate env with Zod → create logger/health → start health server →
+  create client/registries → login → start services on `ClientReady`. Shutdown
+  reverses this and force-exits after `SHUTDOWN_TIMEOUT_MS`.
+- `zod`, `pino`, and `croner` are not installed yet; add them when needed.
+
+## Conventions and gotchas
+
+- ESM only. Relative imports must include `.js`; the root config uses
+  `moduleResolution: node` and will not catch a missing extension.
+- TypeScript is strict. Avoid `any` even though ESLint reports it only as a
+  warning.
+- ESLint enforces single quotes, a final newline, and no trailing whitespace.
+- Never log tokens or point a local `.env` at the production token.
+- V1 state is in memory. Do not add a database, PostgreSQL, Drizzle, or
+  migrations; `DATABASE.md` is a future sketch only.
+- Keep the health server bound to localhost.
+- discord.js is locked to 14.27.0, which uses `clientReady`; `ready` is
+  deprecated.
+- `.devcontainer/mine/` is local-only and git-excluded. Never commit it.
+
+## Commits and change discipline
+
+Use Conventional Commits: `type(scope): lowercase imperative description`, no
+trailing period. Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`,
+`revert`; scope is the package name (`bot`, `core`).
+
+- One logical change per commit; include the test with the code it covers.
+- `pnpm typecheck`, `pnpm lint`, and `pnpm test` must pass before starting the
+  next change.
+- Prefer the smallest change. If an approach is wrong, stop and discuss it
+  rather than widening the change.
