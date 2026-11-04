@@ -1,9 +1,12 @@
 import { Client } from 'discord.js';
+import { createLogger, parseConfig } from '@binarybot/core';
 
 const client = new Client({ intents: [] });
+const config = parseConfig();
 
 client.once('clientReady', () => {
-  console.log('Bot is ready!');
+  const logger = createLogger(config);
+  logger.info('Bot is ready!');
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(config.discordToken);
