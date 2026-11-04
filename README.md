@@ -20,6 +20,7 @@ services, and a localhost-only health endpoint.
 ## Table of contents
 
 - [Target architecture](#target-architecture)
+- [What goes where](#what-goes-where)
 - [Repository layout](#repository-layout)
 - [Tech stack](#tech-stack)
 - [Commands](#commands)
@@ -58,6 +59,42 @@ Shutdown flow: mark not ready → stop services in reverse order → close the
 health server → destroy the client → force-exit after `SHUTDOWN_TIMEOUT_MS`.
 
 V1 keeps runtime state in memory. There is no database.
+
+---
+
+## What goes where
+
+The three source directories answer different questions. Choose by the code's
+job, not by its topic:
+
+| Directory | What belongs there | Lifecycle |
+|---|---|---|
+| `apps/*` | Runnable composition roots: load config, create the client, build registries, mount services, own shutdown. | Owns the process. |
+| `services/*` | In-process background jobs that implement `Service` and are mounted by an app. | Started and stopped by an app. |
+| `packages/*` | Reusable libraries and platform primitives with no entry point. | Imported, never started. |
+
+A quick test:
+
+- If it has an entry point and could be run on its own, it is an **app**.
+- If it has `start`/`stop` and a schedule but no entry point, it is a **service**.
+- If it is code that other modules import, it is a **package**.
+
+Some examples:
+
+- A new slash command or button handler → `apps/bot`, next to the router that
+  dispatches it.
+- A new recurring job → a new `services/<name>/` package.
+- A helper shared by several services, or a new platform capability →
+  `packages/core` (or a new package if it is large and independent).
+- A second executable, such as a command-deployment CLI → a new `apps/<name>/`.
+
+Imports follow the same split:
+
+- `packages/core` imports no other workspace package and never imports
+  discord.js.
+- `services/*` may import `@binarybot/core` and reach Discord through the
+  `client` in `ServiceContext`.
+- `apps/bot` imports both and is the only place that wires them together.
 
 ---
 
