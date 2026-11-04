@@ -1,8 +1,6 @@
 import { Client } from 'discord.js';
 
-const client = new Client({
-  intents: [],
-});
+const client = new Client({ intents: [] });
 
 client.once('clientReady', () => {
   console.log('Bot is ready!');
