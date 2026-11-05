@@ -7,6 +7,7 @@ const config: AppConfig = {
   discordToken: 'super-secret-token',
   discordGuildId: 'test-guild',
   logLevel: 'INFO',
+  nodeEnv: 'test',
 };
 
 const createDestination = (): { destination: Writable; lines: string[] } => {

@@ -5,6 +5,7 @@ import {
   parseConfig,
   type AppConfig,
   type LogLevel,
+  type NodeEnv,
 } from './config.js';
 
 describe('config', () => {
@@ -19,6 +20,7 @@ describe('config', () => {
       readonly discordToken: string;
       readonly discordGuildId: string;
       readonly logLevel: LogLevel;
+      readonly nodeEnv: NodeEnv;
     }>();
   });
 
@@ -38,7 +40,18 @@ describe('config', () => {
       discordToken: 'test-token',
       discordGuildId: 'test-guild',
       logLevel: 'INFO',
+      nodeEnv: 'development',
     });
+  });
+
+  it('rejects an unsupported node environment', () => {
+    expect(() =>
+      configSchema.parse({
+        discordToken: 'test-token',
+        discordGuildId: 'test-guild',
+        nodeEnv: 'staging',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing or empty credentials', () => {
@@ -69,11 +82,13 @@ describe('parseConfig', () => {
         DISCORD_TOKEN: 'test-token',
         DISCORD_GUILD_ID: 'test-guild',
         LOG_LEVEL: 'DEBUG',
+        NODE_ENV: 'production',
       }),
     ).toEqual({
       discordToken: 'test-token',
       discordGuildId: 'test-guild',
       logLevel: 'DEBUG',
+      nodeEnv: 'production',
     });
   });
 
@@ -87,6 +102,7 @@ describe('parseConfig', () => {
       discordToken: 'test-token',
       discordGuildId: 'test-guild',
       logLevel: 'INFO',
+      nodeEnv: 'development',
     });
   });
 

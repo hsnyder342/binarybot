@@ -10,18 +10,24 @@ const logLevelSchema = z.enum([
   'SILENT',
 ]);
 
+const nodeEnvSchema = z.enum(['development', 'test', 'production']);
+
 export type LogLevel = z.infer<typeof logLevelSchema>;
+
+export type NodeEnv = z.infer<typeof nodeEnvSchema>;
 
 export interface AppConfig {
   readonly discordToken: string;
   readonly discordGuildId: string;
   readonly logLevel: LogLevel;
+  readonly nodeEnv: NodeEnv;
 }
 
 export const configSchema = z.object({
   discordToken: z.string().min(1),
   discordGuildId: z.string().min(1),
   logLevel: logLevelSchema.default('INFO'),
+  nodeEnv: nodeEnvSchema.default('development'),
 }) satisfies z.ZodType<AppConfig>;
 
 /**
@@ -35,4 +41,5 @@ export const parseConfig = (env: NodeJS.ProcessEnv = process.env): AppConfig =>
     discordToken: env.DISCORD_TOKEN,
     discordGuildId: env.DISCORD_GUILD_ID,
     logLevel: env.LOG_LEVEL,
+    nodeEnv: env.NODE_ENV,
   });

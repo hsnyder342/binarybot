@@ -13,6 +13,7 @@ const config: AppConfig = {
   discordToken: 'test-token',
   discordGuildId: 'test-guild',
   logLevel: 'SILENT',
+  nodeEnv: 'test',
 };
 
 const health: Health = {
