@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "postCreateCommand": "if [ -f package.json ]; then pnpm install; else echo 'Skipping pnpm install: package.json not found'; fi && if [ -f .env ]; then :; elif [ -f .env.example ]; then cp .env.example .env; else echo 'Error: .env.example not found in the workspace' >&2; exit 1; fi",
+  "postCreateCommand": "./.devcontainer/mine/post-create.sh",
   "customizations": {
     "settings": {
       "terminal.integrated.env.linux": {
