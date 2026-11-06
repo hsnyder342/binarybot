@@ -1,14 +1,6 @@
-import { createLogger, HealthRegistry, parseConfig } from '@binarybot/core';
-import { BotClient } from './client.js';
+import { parseConfig } from '@binarybot/core';
+import { Bot } from './bot.js';
 
-const config = parseConfig();
-const logger = createLogger(config);
-const health = new HealthRegistry();
-const client = new BotClient(config, logger, health);
+const bot = new Bot(parseConfig());
 
-client.once('clientReady', () => {
-  logger.info('Bot is ready!');
-  logger.info('Loading services...');
-});
-
-client.login(config.discordToken);
+await bot.start();
