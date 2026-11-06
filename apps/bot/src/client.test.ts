@@ -2,6 +2,7 @@ import { Writable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import {
   createLogger,
+  HealthRegistry,
   type AppConfig,
   type Service,
 } from '@binarybot/core';
@@ -21,7 +22,11 @@ const createClient = (): BotClient => {
     },
   });
 
-  return new BotClient(config, createLogger(config, destination));
+  return new BotClient(
+    config,
+    createLogger(config, destination),
+    new HealthRegistry(),
+  );
 };
 
 class TestService implements Service<BotClient> {
@@ -40,7 +45,7 @@ describe('BotClient', () => {
       },
     });
     const logger = createLogger(config, destination);
-    const client = new BotClient(config, logger);
+    const client = new BotClient(config, logger, new HealthRegistry());
 
     expect(client.config).toBe(config);
     expect(client.logger).toBe(logger);
